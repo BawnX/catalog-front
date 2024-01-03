@@ -3,154 +3,196 @@ import * as d3 from 'd3'
 const svg = d3.select("svg"),
     width = +svg.attr("width"),
     height = +svg.attr("height");
+svg.attr("viewBox", [-width / 2, -height / 2, width, height])
 
-const data = {
-    "nodes": [{
-        "id": "A",
+const suits = [
+    {
+        "source": "New Exception Maintainer",
+        "target": "Data Integration",
+        "type": "rest"
     },
-        {
-            "id": "B",
-        },
-        {
-            "id": "C",
-        },
-        {
-            "id": "D",
-        },
-        {
-            "id": "E",
-        },
-        {
-            "id": "F",
-        },
-        {
-            "id": "G",
-        },],
-    "links": [{
-        "source": "A",
-        "target": "B"
+    {
+        "source": "Data Integration",
+        "target": "DB CORE",
+        "type": "sqlCore"
     },
-        {
-            "source": "B",
-            "target": "D"
-        },
-        {
-            "source": "C",
-            "target": "F"
-        },
-        {
-            "source": "D",
-            "target": "A"
-        },
-        {
-            "source": "E",
-            "target": "B"
-        },
-        {
-            "source": "F",
-            "target": "A"
-        },
-        {
-            "source": "F",
-            "target": "G"
-        },]
+    {
+        "source": "Data Integration",
+        "target": "DB LEGACY",
+        "type": "sqlLegacy"
+    },
+    {
+        "source": "Data Integration",
+        "target": "DB Data Integration",
+        "type": "sqlTEO"
+    },
+    {
+        "source": "New Exception Maintainer",
+        "target": "Generic Policy",
+        "type": "graphql"
+    },
+    {
+        "source": "Generic Policy",
+        "target": "DB CORE",
+        "type": "sqlCore"
+    },
+    {
+        "source": "New Exception Maintainer",
+        "target": "Broker List",
+        "type": "graphql"
+    },
+    {
+        "source": "New Exception Maintainer",
+        "target": "Generic Person",
+        "type": "rest"
+    },
+    {
+        "source": "New Exception Maintainer",
+        "target": "Product CORE",
+        "type": "rest"
+    },
+    {
+        "source": "New Exception Maintainer",
+        "target": "Crypto CORE",
+        "type": "rest"
+    },
+    {
+        "source": "New Exception Maintainer",
+        "target": "Insured Matter",
+        "type": "rest"
+    },
+    {
+        "source": "New Exception Maintainer",
+        "target": "PDF Policy CORE",
+        "type": "rest"
+    },
+    {
+        "source": "New Exception Maintainer",
+        "target": "Generic Person",
+        "type": "graphql"
+    },
+    {
+        "source": "New Exception Maintainer",
+        "target": "Process Exception Maintainer",
+        "type": "rest"
+    },
+    {
+        "source": "New Exception Maintainer",
+        "target": "Payment",
+        "type": "graphql"
+    },
+    {
+        "source": "New Exception Maintainer",
+        "target": "Renewals",
+        "type": "rest"
+    },
+    {
+        "source": "New Exception Maintainer",
+        "target": "Contractor CORE",
+        "type": "rest"
+    },
+    {
+        "source": "New Exception Maintainer",
+        "target": "CORE Maintainer",
+        "type": "rest"
+    },
+]
+
+const types = Array.from(new Set(suits.map(d => d.type)));
+const nodes = Array.from(new Set(suits.flatMap(l => [l.source, l.target])), id => ({id}));
+const links = suits.map(d => Object.create(d))
+const color = d3.scaleOrdinal(types, d3.schemeCategory10);
+
+const drag = (simulation: any) => {
+
+    function dragstarted(event: any, d: any) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    function dragged(event: any, d: any) {
+        d.fx = event.x;
+        d.fy = event.y;
+    }
+
+    function dragended(event: any, d: any) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+
+    return d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended);
 }
 
-const zoom = d3.zoom()
-    .on("zoom", function(event) {
-        g.attr("transform", event.transform)
-    })
-
-const g = svg.append("g")
-svg.call(zoom)
 
 ////////////////////////
 // outer force layout
-const simulation = d3.forceSimulation()
-    .force("size", d3.forceCenter(width / 2, height / 2))
-    .force("charge", d3.forceManyBody().strength(-5000))
-    .force("link", d3.forceLink().id(function (d) {
-        return d.id
-    }).distance(10))
+const simulation = d3.forceSimulation(nodes as any)
+    .force("link", d3.forceLink(links).id((d: any) => d.id))
+    .force("charge", d3.forceManyBody().strength(-800))
+    .force("x", d3.forceX())
+    .force("y", d3.forceY());
 
-const linksContainer = g.append("g").attr("class", "linkscontainer")
-const nodesContainer = g.append("g").attr("class", "nodesContainer")
-
-const links = linksContainer.selectAll(".linkPath")
-    .data(data.links)
-    .enter()
+svg.append("defs").selectAll("marker")
+    .data(types)
+    .join("marker")
+    .attr("id", d => `arrow-${d}`)
+    .attr("viewBox", "0 -5 10 10")
+    .attr("refX", 15)
+    .attr("refY", -0.5)
+    .attr("markerWidth", 6)
+    .attr("markerHeight", 6)
+    .attr("orient", "auto")
     .append("path")
-    .attr("class", "linkPath")
-    .attr("stroke", "whitesmoke")
-    .attr("fill", "transparent")
+    .attr("fill", color)
+    .attr("d", "M0,-5L10,0L0,5");
+const link = svg.append("g")
+    .attr("fill", "none")
     .attr("stroke-width", 1.5)
+    .selectAll("path")
+    .data(links)
+    .join("path")
+    .attr("stroke", d => color(d.type))
+    .attr("marker-end", d => `url(${new URL(`#arrow-${d.type}`, location as any)})`);
 
+const node = svg.append("g")
+    .attr("fill", "currentColor")
+    .attr("stroke-linecap", "round")
+    .attr("stroke-linejoin", "round")
+    .selectAll("g")
+    .data(nodes)
+    .join("g")
+    .call(drag(simulation) as any);
 
-const nodes = nodesContainer.selectAll(".nodes")
-    .data(data.nodes, function (d) {
-        return d.id;
-    })
-    .enter()
-    .append("g")
-    .attr("class", "nodes")
-    .call(d3.drag()
-        .on("start", dragStarted)
-        .on("drag", dragged)
-        .on("end", dragEnded)
-    )
-    .on("click", function(event, d) {
-        //event.stopPropagation();
-        svg.transition().duration(700).call(
-            zoom.transform,
-            d3.zoomIdentity.translate((width / 2), (height / 2)).scale(1.2).translate(-d.x, -d.y),
-            d3.pointer(event)
-        );
-    })
+node.append("circle")
+    .attr("stroke", "white")
+    .attr("stroke-width", 1.5)
+    .attr("r", 6);
 
-nodes.selectAll("circle")
-    .data(d => [d])
-    .enter()
-    .append("circle")
-    .attr("class", "circle")
-    .style("stroke", "whitesmoke")
-    .style("fill", "#76c893")
-    .style("cursor", "pointer")
-    .attr("r", 20)
+node.append("text")
+    .attr("x", 8)
+    .attr("y", "0.31em")
+    .text(d => d.id)
+    .clone(true).lower()
+    .attr("fill", "none")
+    .attr("stroke", "black")
+    .attr("stroke-width", 3);
 
-simulation
-    .nodes(data.nodes)
-    .on("tick", tick)
-
-simulation
-    .force("link")
-    .links(data.links)
-
-function tick() {
-    links.attr("d", function (d) {
-        const dx = (d.target.x - d.source.x),
-            dy = (d.target.y - d.source.y),
-            dr = Math.sqrt(dx * dx + dy * dy)
-
-        return "M" + d.source.x + "," + d.source.y + "A" + dr + "," + dr + " 0 0,1 " + d.target.x + "," + d.target.y;
-    })
-
-    nodes
-        .attr("transform", d => `translate(${d.x}, ${d.y})`);
+function linkArc(d: any) {
+    const r = Math.hypot(d.target.x - d.source.x, d.target.y - d.source.y);
+    return `
+    M${d.source.x},${d.source.y}
+    A${r},${r} 0 0,1 ${d.target.x},${d.target.y}
+  `;
 }
 
-function dragStarted(event, d) {
-    if (!event.active) simulation.alphaTarget(0.3).restart();
-    d.fx = d.x;
-    d.fy = d.y;
-}
+simulation.on("tick", () => {
+    link.attr("d", linkArc);
+    node.attr("transform", (d: any) => `translate(${d.x},${d.y})`);
+});
 
-function dragged(event, d) {
-    d.fx = event.x;
-    d.fy = event.y;
-}
 
-function dragEnded(event, d) {
-    if (!event.active) simulation.alphaTarget(0);
-    d.fx = null;
-    d.fy = null;
-}
